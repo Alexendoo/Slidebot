@@ -1,21 +1,23 @@
 require 'cinch'
 require 'date'
 require 'json'
+require 'net/http'
 require 'openssl'
 require 'rubygems'
 require 'sinatra'
+require 'uri'
 
 $config = JSON.parse(File.read('config.json'))
 
 $bot = Cinch::Bot.new do
   configure do |c|
-    c.server = $config['server']
-    c.port = $config['port']
-    c.ssl.use = $config['ssl']['use']
-    c.nick = $config['nick']
-    c.user = $config['user']
-    c.password = $config['password']
-    c.channels = $config['channels']
+    c.server = $config['irc']['server']
+    c.port = $config['irc']['port']
+    c.ssl.use = $config['irc']['ssl']['use']
+    c.nick = $config['irc']['nick']
+    c.user = $config['irc']['user']
+    c.password = $config['irc']['password']
+    c.channels = $config['irc']['channels']
   end
 
   on :message, "ping" do |m|
@@ -28,7 +30,10 @@ Thread.new do
 end
 
 def say(msg)
-  $
+  $config['irc']['channels'].each do |c|
+    $bot.Channel(c).send msg
+  end
+end
 
 post '/' do
   request.body.rewind
@@ -42,36 +47,40 @@ post '/' do
   rescue NameError
     return halt 501, "Not Implemented"
   end
-  "Sucess"
+  return halt 200, "Success"
 end
 
 def verify_signature(payload_body)
-  signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), ENV['SECRET_TOKEN'], payload_body)
+  signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), $config['hooks']['secret'], payload_body)
   return halt 500, "Signature mismatch" unless Rack::Utils.secure_compare(signature, request.env['HTTP_X_HUB_SIGNATURE'])
 end
 
-def receive_push(data)
-  data['commits'].sort! do |a,b|
-    ta = tb = nil
-    begin
-      ta = DateTime.parse(a["timestamp"])
-    rescue ArgumentError
-      ta = Time.at(a["timestamp"].to_i)
-    end
-    begin
-      tb = DateTime.parse(b["timestamp"])
-    rescue ArgumentError
-      tb = Time.at(b["timestamp"].to_i)
-    end
-    ta <=> tb
-  end
+def receive_ping(data)
+  return halt 200, "pong"
+end
 
-  puts "\nRepo: #{data['repository']['name']}, Pusher: #{data['pusher']['name']}\n"
-  data['commits'][0..4].each do |c|
-    puts c['message']
-  end
+def receive_push(d)
+  branch = d['ref'].split('/').last
+  repo = d['repository']['name']
 
-  return halt 200
+  puts shorten(d['compare'])
+
+  say "[#{fmt_repo repo}] #{fmt_name d['pusher']['name']} pushed #{fmt_num d['commits'].count} new commit#{d['commits'].count == 1 ? '' : 's'} to #{fmt_branch branch}"
+  d['commits'][0..2].each do |commit|
+    if commit['message'].include? "\n"
+      message = commit['message'].split("\n").first + "..."
+    else
+      message = commit['message']
+    end
+    say "#{fmt_repo repo}/#{fmt_branch branch} #{fmt_hash commit['id'][0..6]} #{fmt_name commit['author']['username']} #{message}"
+  end
+end
+
+def shorten(url)
+  uri = URI.parse(url)
+  response = Net::HTTP.post_form(URI.parse("http://git.io"), {"url" => uri})
+
+  puts "\n\nCode: #{response.code}\n\nBody: #{response.body}\n\n"
 end
 
 def fmt_url(s)
@@ -96,4 +105,8 @@ end
 
 def fmt_hash(s)
   "\00314#{s}\017"
+end
+
+def fmt_num(s)
+  "\002#{s}\017"
 end
