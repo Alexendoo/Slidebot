@@ -1,8 +1,34 @@
-require 'rubygems'
+require 'cinch'
 require 'date'
-require 'sinatra'
 require 'json'
 require 'openssl'
+require 'rubygems'
+require 'sinatra'
+
+$config = JSON.parse(File.read('config.json'))
+
+$bot = Cinch::Bot.new do
+  configure do |c|
+    c.server = $config['server']
+    c.port = $config['port']
+    c.ssl.use = $config['ssl']['use']
+    c.nick = $config['nick']
+    c.user = $config['user']
+    c.password = $config['password']
+    c.channels = $config['channels']
+  end
+
+  on :message, "ping" do |m|
+    m.reply "#{m.user.nick}: pong"
+  end
+end
+
+Thread.new do
+  $bot.start
+end
+
+def say(msg)
+  $
 
 post '/' do
   request.body.rewind
@@ -10,9 +36,6 @@ post '/' do
   verify_signature(payload_body)
   data = JSON.parse payload_body
   event = request.env['HTTP_X_GITHUB_EVENT']
-
-  puts "\n#{request.env}"
-  puts "\nJSON: #{data.inspect}"
 
   begin
     send "receive_#{event}", data
