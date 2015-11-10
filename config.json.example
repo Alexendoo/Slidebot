@@ -1,0 +1,22 @@
+{
+  "irc": {
+    "server": "chat.freenode.net",
+    "port": 50000,
+    "ssl": {
+      "use": true
+    },
+    "nick": "hookbot",
+    "user": "hookbot",
+    "password": null,
+    "channels": [
+      "#example"
+    ],
+    "modes": []
+  },
+  "hooks": {
+    "pull_request": {
+      "actions": [ "opened", "closed", "reopened" ]
+    }
+  },
+  "secret": "moo"
+}
