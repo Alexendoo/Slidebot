@@ -148,13 +148,13 @@ def receive_public(d)
 end
 
 def receive_pull_request(d)
-  case d['pull_request']['action']
+  case d['action']
   when "synchronize"
     action = "synchronised"
   when "closed"
-    action = d['pull_request']['merged'] == true ? "merged" : "rejected"
+    action = (d['pull_request']['merged'] == true ? "merged" : "closed")
   end
-  say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['pull_request']['user']['login']} #{action} pull request ##{d['pull_request']['number']}: #{d['pull_request']['title']}#{fmt_url shorten d['pull_request']['html_url']}"
+  say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['pull_request']['user']['login']} #{action} pull request ##{d['pull_request']['number']}: #{d['pull_request']['title']} (#{fmt_branch d['pull_request']['head']['ref']} → #{fmt_branch d['pull_request']['base']['ref']})#{fmt_url shorten d['pull_request']['html_url']}"
 end
 
 def receive_pull_request_review_comment(d)
@@ -164,9 +164,15 @@ end
 def receive_push(d)
   branch = d['ref'].split('/').last
   repo = d['repository']['name']
+  distinct = d['commits'].select{|commit| commit['distinct']}
 
-  say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} #{d['forced'] ? (fmt_bad 'force pushed') : 'pushed'} #{fmt_num d['commits'].count} new commit#{d['commits'].count == 1 ? '' : 's'} to #{fmt_branch branch}:#{fmt_url shorten d['compare']}"
-  d['commits'][0..2].each do |commit|
+  if distinct.count == 0
+    say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} fast-forwarded #{fmt_repo branch} from #{fmt_hash d['before']} to #{fmt_hash d['after']}:#{fmt_url shorten d['compare']}"
+    return halt 200
+  end
+
+  say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} #{d['forced'] ? (fmt_bad 'force pushed') : 'pushed'} #{fmt_num distinct.count} new commit#{distinct.count == 1 ? '' : 's'} to #{fmt_branch branch}:#{fmt_url shorten d['compare']}"
+  distinct[0..2].each do |commit|
     if commit['message'].include? "\n"
       message = commit['message'].split("\n").first + "..."
     else
@@ -223,7 +229,7 @@ def fmt_tag(s)
 end
 
 def fmt_hash(s)
-  "\00314#{s}\003"[0..6]
+  "\00314#{s[0..6]}\003"
 end
 
 def fmt_num(s)
