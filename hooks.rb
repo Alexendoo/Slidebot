@@ -1,38 +1,41 @@
 require 'cinch'
-require 'date'
 require 'json'
-require 'net/http'
 require 'openssl'
 require 'rubygems'
 require 'sinatra'
-require 'uri'
+require 'rest-client'
 
-$config = JSON.parse(File.read('config.json'))
+CONFIG = JSON.parse(File.read('config.json'))
 
-$bot = Cinch::Bot.new do
+bot = Cinch::Bot.new do
   configure do |c|
-    c.server = $config['irc']['server']
-    c.port = $config['irc']['port']
-    c.ssl.use = $config['irc']['ssl']['use']
-    c.nick = $config['irc']['nick']
-    c.user = $config['irc']['user']
-    c.password = $config['irc']['password']
-    c.channels = $config['irc']['channels']
-    c.modes = $config['irc']['modes']
+    c.server = CONFIG['irc']['server']
+    c.port = CONFIG['irc']['port']
+    c.ssl.use = CONFIG['irc']['ssl']['use']
+    c.nick = CONFIG['irc']['nick']
+    c.user = CONFIG['irc']['user']
+    c.password = CONFIG['irc']['password']
+    c.channels = CONFIG['irc']['channels']
+    c.modes = CONFIG['irc']['modes']
   end
 
-  on :message, "ping" do |m|
-    m.reply "#{m.user.nick}: pong"
+  on :message, /#\d{2,}/ do |m|
+    return unless m.user.nick == 'Alexendoo'
+    m.message.scan(/#\K\d{2,}/).each do |issue|
+      data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG['github']['repo']}/issues/#{issue}",
+                                       params: { access_token: CONFIG['github']['token'] }))
+      m.reply "[#{data['state'] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?('pull_request') ? 'Pull request' : 'Issue'} ##{data['number']}: #{data['title']}#{fmt_url shorten data['html_url']}"
+    end
   end
 end
 
 Thread.new do
-  $bot.start
+  bot.start
 end
 
 def say(msg)
-  $config['irc']['channels'].each do |c|
-    $bot.Channel(c).send msg
+  CONFIG['irc']['channels'].each do |c|
+    bot.Channel(c).send msg
   end
 end
 
@@ -43,17 +46,20 @@ post '/' do
   data = JSON.parse payload_body
   event = request.env['HTTP_X_GITHUB_EVENT']
 
+  if CONFIG['hooks'][event].key 'actions'
+    return 200, "Action not implemented: #{event}" unless CONFIG['hooks'][event]['actions'].key data['action']
+  end
   send "receive_#{event}", data
   return halt 200
 end
 
 def verify_signature(payload_body)
-  signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), $config['secret'], payload_body)
-  return halt 500, "Signature mismatch" unless Rack::Utils.secure_compare(signature, request.env['HTTP_X_HUB_SIGNATURE'])
+  signature = 'sha1=' + OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha1'), CONFIG['github']['secret'], payload_body)
+  return halt 500, 'Signature mismatch' unless Rack::Utils.secure_compare(signature, request.env['HTTP_X_HUB_SIGNATURE'])
 end
 
-def receive_ping(data)
-  return halt 200, "pong"
+def receive_ping(_d)
+  halt 200, 'pong'
 end
 
 #==============================================================================#
@@ -80,17 +86,13 @@ def receive_deployment(d)
 end
 
 def receive_deployment_status(d)
-  case d['deployment_status']['state']
-  when 'pending'
-    output = 'Pending'
-  when 'success'
-    output = fmt_good 'Success'
-  when 'failure'
-    output = fmt_bad 'Failed'
-  when 'error'
-    output = fmt_bad 'Error'
-  end
-
+  output =
+    case d['deployment_status']['state']
+    when 'pending' then 'Pending'
+    when 'success' then fmt_good 'Success'
+    when 'failure' then fmt_bad 'Failed'
+    when 'error' then fmt_bad 'Error'
+    end
   say "[#{fmt_repo d['repository']['name']}] Deployment #{fmt_hash d['deployment']['sha']} to #{fmt_tag d['deployment']['environment']}: #{output}"
 end
 
@@ -123,7 +125,7 @@ def receive_gollum(d)
 end
 
 def receive_issues(d)
-  return halt 202, "#{d['action']} not enabled" unless $config['hooks']['pull_request']['actions'].include? d['action']
+  return halt 202, "#{d['action']} not enabled" unless CONFIG['hooks']['pull_request']['actions'].include? d['action']
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['issue']['user']['login']} #{d['action']} issue ##{d['issue']['number']}: #{d['issue']['title']}#{fmt_url shorten d['issue']['html_url']}"
 end
 
@@ -131,28 +133,28 @@ def receive_issue_comment(d)
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['issue']['user']['login']} commented on issue ##{d['issue']['number']}: #{d['issue']['title']}#{fmt_url shorten d['comment']['html_url']}"
 end
 
-def receive_member(d)
-  return halt 501
+def receive_member(_d)
+  halt 501
 end
 
-def receive_membership(d)
-  return halt 501
+def receive_membership(_d)
+  halt 501
 end
 
-def receive_page_build(d)
-  return halt 501
+def receive_page_build(_d)
+  halt 501
 end
 
-def receive_public(d)
-  return halt 501
+def receive_public(_d)
+  halt 501
 end
 
 def receive_pull_request(d)
   case d['action']
-  when "synchronize"
-    action = "synchronised"
-  when "closed"
-    action = (d['pull_request']['merged'] == true ? "merged" : "closed")
+  when 'synchronize'
+    action = 'synchronised'
+  when 'closed'
+    action = (d['pull_request']['merged'] == true ? 'merged' : 'closed')
   end
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['pull_request']['user']['login']} #{action} pull request ##{d['pull_request']['number']}: #{d['pull_request']['title']} (#{fmt_branch d['pull_request']['head']['ref']} → #{fmt_branch d['pull_request']['base']['ref']})#{fmt_url shorten d['pull_request']['html_url']}"
 end
@@ -164,7 +166,7 @@ end
 def receive_push(d)
   branch = d['ref'].split('/').last
   repo = d['repository']['name']
-  distinct = d['commits'].select{|commit| commit['distinct']}
+  distinct = d['commits'].select { |commit| commit['distinct'] }
 
   if distinct.count == 0
     say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} fast-forwarded #{fmt_repo branch} from #{fmt_hash d['before']} to #{fmt_hash d['after']}:#{fmt_url shorten d['compare']}"
@@ -173,39 +175,38 @@ def receive_push(d)
 
   say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} #{d['forced'] ? (fmt_bad 'force pushed') : 'pushed'} #{fmt_num distinct.count} new commit#{distinct.count == 1 ? '' : 's'} to #{fmt_branch branch}:#{fmt_url shorten d['compare']}"
   distinct[0..2].each do |commit|
-    if commit['message'].include? "\n"
-      message = commit['message'].split("\n").first + "..."
-    else
-      message = commit['message']
-    end
+    message =
+      if commit['message'].include? "\n"
+        commit['message'].split("\n").first + '...'
+      else
+        commit['message']
+      end
     say "#{fmt_repo repo}/#{fmt_branch branch} #{fmt_hash commit['id']} #{fmt_name commit['author']['username']} #{message}"
   end
 end
 
-def receive_repository(d)
-  return halt 501
+def receive_repository(_d)
+  halt 501
 end
 
-def receive_release(d)
-  return halt 501
+def receive_release(_d)
+  halt 501
 end
 
-def receive_status(d)
-  return halt 501
+def receive_status(_d)
+  halt 501
 end
 
-def receive_team_add(d)
-  return halt 501
+def receive_team_add(_d)
+  halt 501
 end
 
-def receive_watch(d)
-  return halt 501
+def receive_watch(_d)
+  halt 501
 end
 
 def shorten(url)
-  uri = URI.parse(url)
-  response = Net::HTTP.post_form(URI.parse("http://git.io"), {"url" => uri})
-  return response['location']
+  (RestClient.post 'https://git.io', url: url).headers[:location]
 end
 
 def fmt_url(s)

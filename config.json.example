@@ -18,5 +18,9 @@
       "actions": [ "opened", "closed", "reopened" ]
     }
   },
-  "secret": "moo"
+  "github": {
+    "secret": "moo",
+    "repo": "username/reponame",
+    "token": "..."
+  }
 }
