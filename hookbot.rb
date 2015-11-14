@@ -11,19 +11,19 @@ CONFIG = JSON.parse(File.read('config.json'))
 
 bot = Cinch::Bot.new do
   configure do |c|
-    c.server = CONFIG['irc']['server']
-    c.port = CONFIG['irc']['port']
-    c.ssl.use = CONFIG['irc']['ssl']['use']
-    c.nick = CONFIG['irc']['nick']
-    c.user = CONFIG['irc']['user']
+    c.server   = CONFIG['irc']['server']
+    c.port     = CONFIG['irc']['port']
+    c.ssl.use  = CONFIG['irc']['ssl']['use']
+    c.nick     = CONFIG['irc']['nick']
+    c.user     = CONFIG['irc']['user']
     c.password = CONFIG['irc']['password']
     c.channels = CONFIG['irc']['channels']
-    c.modes = CONFIG['irc']['modes']
+    c.modes    = CONFIG['irc']['modes']
   end
 
   on :message, /#\d{2,}/ do |m|
     return unless m.user.nick == 'Alexendoo'
-    m.message.scan(/#\K\d{2,}/).each do |issue|
+    m.message.scan(/#\K\d{2,}/).first(3).each do |issue|
       data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG['github']['repo']}/issues/#{issue}",
                                        params: { access_token: CONFIG['github']['token'] }))
       m.reply "[#{data['state'] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?('pull_request') ? 'Pull request' : 'Issue'} ##{data['number']}: #{data['title']}#{fmt_url shorten data['html_url']}"
@@ -44,12 +44,12 @@ end
 post '/' do
   request.body.rewind
   payload_body = request.body.read
-  verify_signature(payload_body)
+  verify_signature(payload_body) if CONFIG['github'].key('secret')
   data = JSON.parse payload_body
   event = request.env['HTTP_X_GITHUB_EVENT']
 
-  if CONFIG['hooks'][event].key 'actions'
-    return 200, "Action not implemented: #{event}" unless CONFIG['hooks'][event]['actions'].key data['action']
+  if CONFIG['hooks'].key(event) && CONFIG['hooks'][event].key('actions')
+    return halt 200, "Action not implemented: #{event}" unless CONFIG['hooks'][event]['actions'].key data['action']
   end
   send "receive_#{event}", data
   return halt 200
@@ -120,7 +120,6 @@ def receive_gollum(d)
 end
 
 def receive_issues(d)
-  return halt 202, "#{d['action']} not enabled" unless CONFIG['hooks']['pull_request']['actions'].include? d['action']
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['issue']['user']['login']} #{d['action']} issue ##{d['issue']['number']}: #{d['issue']['title']}#{fmt_url shorten d['issue']['html_url']}"
 end
 
@@ -169,7 +168,7 @@ def receive_push(d)
   end
 
   say "[#{fmt_repo repo}] #{fmt_name d['sender']['login']} #{d['forced'] ? (fmt_bad 'force pushed') : 'pushed'} #{fmt_num distinct.count} new commit#{distinct.count == 1 ? '' : 's'} to #{fmt_branch branch}:#{fmt_url shorten d['compare']}"
-  distinct[0..2].each do |commit|
+  distinct.first(3).each do |commit|
     message =
       if commit['message'].include? "\n"
         commit['message'].split("\n").first + '...'
