@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+gem 'cinch'
+gem 'json'
+gem 'sinatra'
+gem 'rest-client'

@@ -1,7 +1,9 @@
+require 'rubygems'
+require 'bundler/setup'
+
 require 'cinch'
 require 'json'
 require 'openssl'
-require 'rubygems'
 require 'sinatra'
 require 'rest-client'
 
@@ -61,13 +63,6 @@ end
 def receive_ping(_d)
   halt 200, 'pong'
 end
-
-#==============================================================================#
-# TODO:                                                                        #
-# enable/disable in post '/' rather than invidually                            #
-# Whitelist/blacklist by other values, not just create: deployment status code #
-# Respond to chat #\d\d\d with git.io link + description                       #
-#==============================================================================#
 
 def receive_commit_comment(d)
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['comment']['user']['login']} commented on commit #{fmt_hash d['comment']['commit_id']}:#{shorten fmt_url d['comment']['html_url']}"
