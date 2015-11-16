@@ -9,7 +9,7 @@ require 'rest-client'
 
 CONFIG = JSON.parse(File.read('config.json'))
 
-bot = Cinch::Bot.new do
+$bot = Cinch::Bot.new do
   configure do |c|
     c.server   = CONFIG['irc']['server']
     c.port     = CONFIG['irc']['port']
@@ -32,12 +32,12 @@ bot = Cinch::Bot.new do
 end
 
 Thread.new do
-  bot.start
+  $bot.start
 end
 
 def say(msg)
   CONFIG['irc']['channels'].each do |c|
-    bot.Channel(c).send msg
+    $bot.Channel(c).send msg
   end
 end
 
