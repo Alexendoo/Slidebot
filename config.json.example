@@ -1,7 +1,7 @@
 {
   "irc": {
     "server": "chat.freenode.net",
-    "port": 50000,
+    "port": 6697,
     "ssl": {
       "use": true
     },
@@ -10,8 +10,7 @@
     "password": null,
     "channels": [
       "#example"
-    ],
-    "modes": []
+    ]
   },
   "exclude": {
     "issues": [ "labeled", "unlabeled" ],

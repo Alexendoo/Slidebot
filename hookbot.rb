@@ -18,7 +18,6 @@ $bot = Cinch::Bot.new do
     c.user     = CONFIG['irc']['user']
     c.password = CONFIG['irc']['password']
     c.channels = CONFIG['irc']['channels']
-    c.modes    = CONFIG['irc']['modes']
   end
 
   on :message, /#\d{2,}/ do |m|
@@ -48,18 +47,17 @@ post '/' do
   data = JSON.parse payload_body
   event = request.env['HTTP_X_GITHUB_EVENT']
 
-  puts event
-
-  ## ======================================================================== ##
-  ##    TODO:                                                                 ##
-  ##      Move to method                                                      ##
-  ##      include create/delete ref_type                                      ##
-  ## ======================================================================== ##
-  if CONFIG['ignore'].key? event
-    return halt 202, "Ignored: #{event}" if CONFIG['ignore'][event].include?(data['action'])
-  end
+  return halt 202, "Ignored: #{event}" if ignored?(event, data)
   send "receive_#{event}", data
   return halt 200
+end
+
+def ignored?(event, data)
+  return False unless CONFIG.key?('ignore') && CONFIG['ignore'].key?(event)
+  return True if CONFIG['ignore'][event].empty?
+  match = (event == 'create' || event == 'delete') ? 'ref_type' : 'action'
+  return True if CONFIG['ignore'][event].include? data[match]
+  False
 end
 
 def verify_signature(payload_body)
@@ -116,8 +114,8 @@ def receive_gollum(d)
   if d['pages'].count == 1
     page = d['pages'].first
     output = "#{page['action'] == 'created' ? 'created' : 'edited'} page #{page['title']}:#{fmt_url shorten page['html_url']}"
-  elsif created > 0 and edited > 0
-    output = "edited #{fmt_num edited} and created #{fmt_num created} page#{created == 1 and edited == 1 ? '' : 's'}:#{fallback_url}"
+  elsif created > 0 && edited > 0
+    output = "edited #{fmt_num edited} and created #{fmt_num created} page#{created == 1 && edited == 1 ? '' : 's'}:#{fallback_url}"
   elsif created > 0
     output = "created #{fmt_num edited} page#{created == 1 ? '' : 's'}:#{fallback_url}"
   else
