@@ -44,12 +44,19 @@ end
 post '/' do
   request.body.rewind
   payload_body = request.body.read
-  verify_signature(payload_body) if CONFIG['github'].key('secret')
+  verify_signature(payload_body) if CONFIG['github'].key?('secret')
   data = JSON.parse payload_body
   event = request.env['HTTP_X_GITHUB_EVENT']
 
-  if CONFIG['hooks'].key(event) && CONFIG['hooks'][event].key('actions')
-    return halt 200, "Action not implemented: #{event}" unless CONFIG['hooks'][event]['actions'].key data['action']
+  puts event
+
+  ## ======================================================================== ##
+  ##    TODO:                                                                 ##
+  ##      Move to method                                                      ##
+  ##      include create/delete ref_type                                      ##
+  ## ======================================================================== ##
+  if CONFIG['ignore'].key? event
+    return halt 202, "Ignored: #{event}" if CONFIG['ignore'][event].include?(data['action'])
   end
   send "receive_#{event}", data
   return halt 200
@@ -144,12 +151,15 @@ def receive_public(_d)
 end
 
 def receive_pull_request(d)
-  case d['action']
-  when 'synchronize'
-    action = 'synchronised'
-  when 'closed'
-    action = (d['pull_request']['merged'] == true ? 'merged' : 'closed')
-  end
+  action =
+    case d['action']
+    when 'synchronize'
+      'synchronised'
+    when 'closed'
+      (d['pull_request']['merged'] == true ? 'merged' : 'closed')
+    else
+      d['action']
+    end
   say "[#{fmt_repo d['repository']['name']}] #{fmt_name d['pull_request']['user']['login']} #{action} pull request ##{d['pull_request']['number']}: #{d['pull_request']['title']} (#{fmt_branch d['pull_request']['head']['ref']} → #{fmt_branch d['pull_request']['base']['ref']})#{fmt_url shorten d['pull_request']['html_url']}"
 end
 
@@ -224,7 +234,7 @@ def fmt_tag(s)
 end
 
 def fmt_hash(s)
-  "\00314#{s[0..6]}\003"
+  "\00314#{s.first(7)}\003"
 end
 
 def fmt_num(s)

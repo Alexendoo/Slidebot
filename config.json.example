@@ -13,10 +13,9 @@
     ],
     "modes": []
   },
-  "hooks": {
-    "pull_request": {
-      "actions": [ "opened", "closed", "reopened" ]
-    }
+  "exclude": {
+    "issues": [ "labeled", "unlabeled" ],
+    "pull_request": [ "labeled", "unlabeled"]
   },
   "github": {
     "secret": "moo",
