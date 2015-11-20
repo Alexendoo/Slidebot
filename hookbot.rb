@@ -11,17 +11,11 @@ CONFIG = JSON.parse(File.read('config.json'), symbolize_names: true)
 
 $bot = Cinch::Bot.new do
   configure do |c|
-    # c.server   = CONFIG[:irc]['server']
-    # c.port     = CONFIG[:irc]['port']
-    # c.ssl.use  = CONFIG[:irc]['ssl']['use']
-    # c.nick     = CONFIG[:irc]['nick']
-    # c.user     = CONFIG[:irc][:user]
-    # c.password = CONFIG[:irc]['password']
-    # c.channels = CONFIG[:irc][:channels]
     c.load CONFIG[:irc]
   end
 
   on :message, /\B#\d{2,}\b/ do |m|
+    return if m.user.nick == CONFIG[:irc][:nick]
     m.message.scan(/\B#\K\d{2,}\b/).first(3).each do |issue|
       data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG[:github][:repo]}/issues/#{issue}",
                                        params: { access_token: CONFIG[:github][:token] }),
@@ -47,20 +41,19 @@ post '/' do
   request.body.rewind
   payload_body = request.body.read
   verify_signature(payload_body) if CONFIG[:github].key?(:secret)
-  data = JSON.parse payload_body
-  event = request.env['HTTP_X_GITHUB_EVENT']
-
+  data = JSON.parse(payload_body, symbolize_names: true)
+  event = request.env['HTTP_X_GITHUB_EVENT'].to_sym
   return halt 202, "Ignored: #{event}" if ignored?(event, data)
   send "receive_#{event}", data
   return halt 200
 end
 
 def ignored?(event, data)
-  return False unless CONFIG.key?(:ignore) && CONFIG[:ignore].key?(event)
-  return True if CONFIG[:ignore][event].empty?
+  return false unless CONFIG.key?(:ignore) && CONFIG[:ignore].key?(event)
+  return true if CONFIG[:ignore][event].empty?
   match = (event == 'create' || event == 'delete') ? :ref_type : :action
-  return True if CONFIG[:ignore][event].include? data[match]
-  False
+  return true if CONFIG[:ignore][event].include? data[match]
+  false
 end
 
 def verify_signature(payload_body)
@@ -235,7 +228,7 @@ def fmt_tag(s)
 end
 
 def fmt_hash(s)
-  "\00314#{s.first(7)}\003"
+  "\00314#{s[0..6]}\003"
 end
 
 def fmt_num(s)
