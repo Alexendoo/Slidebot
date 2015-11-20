@@ -21,8 +21,7 @@ $bot = Cinch::Bot.new do
   end
 
   on :message, /#\d{2,}/ do |m|
-    return unless m.user.nick == 'Alexendoo'
-    m.message.scan(/#\K\d{2,}/).first(3).each do |issue|
+    m.message.scan(/\B#\K\d{2,}\b/).first(3).each do |issue|
       data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG['github']['repo']}/issues/#{issue}",
                                        params: { access_token: CONFIG['github']['token'] }))
       m.reply "[#{data['state'] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?('pull_request') ? 'Pull request' : 'Issue'} ##{data['number']}: #{data['title']}#{fmt_url shorten data['html_url']}"
