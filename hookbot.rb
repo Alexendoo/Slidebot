@@ -7,7 +7,7 @@ require 'openssl'
 require 'sinatra'
 require 'rest-client'
 
-CONFIG = JSON.parse(File.read('config.json'), :symbolize_names => true)
+CONFIG = JSON.parse(File.read('config.json'), symbolize_names: true)
 
 $bot = Cinch::Bot.new do
   configure do |c|
@@ -21,10 +21,11 @@ $bot = Cinch::Bot.new do
     c.load CONFIG[:irc]
   end
 
-  on :message, /#\d{2,}/ do |m|
+  on :message, /\B#\d{2,}\b/ do |m|
     m.message.scan(/\B#\K\d{2,}\b/).first(3).each do |issue|
       data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG[:github][:repo]}/issues/#{issue}",
-                                       params: { access_token: CONFIG[:github][:token] }))
+                                       params: { access_token: CONFIG[:github][:token] }),
+                        symbolize_names: true)
       m.reply "[#{data[:state] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?(:pull_request) ? 'Pull request' : 'Issue'} ##{data[:number]}: #{data[:title]}#{fmt_url shorten data[:html_url]}"
     end
   end
