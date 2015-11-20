@@ -30,6 +30,8 @@ $bot = Cinch::Bot.new do
   end
 end
 
+$bot.loggers.level = :info
+
 Thread.new do
   $bot.start
 end
