@@ -66,7 +66,7 @@ def receive_ping(_d)
 end
 
 def receive_commit_comment(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:comment][:user][:login]} commented on commit #{fmt_hash d[:comment][:commit_id]}:#{shorten fmt_url d[:comment][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} commented on commit #{fmt_hash d[:comment][:commit_id]}:#{shorten fmt_url d[:comment][:html_url]}"
 end
 
 def receive_create(d)
@@ -78,7 +78,7 @@ def receive_delete(d)
 end
 
 def receive_deployment(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:deployment][:creator][:login]} deployed #{fmt_hash d[:deployment][:sha]} to #{fmt_tag d[:deployment][:environment]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} deployed #{fmt_hash d[:deployment][:sha]} to #{fmt_tag d[:deployment][:environment]}"
 end
 
 def receive_deployment_status(d)
@@ -121,11 +121,11 @@ def receive_gollum(d)
 end
 
 def receive_issues(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:issue][:user][:login]} #{d[:action]} issue ##{d[:issue][:number]}: #{d[:issue][:title]}#{fmt_url shorten d[:issue][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} #{d[:action]} issue ##{d[:issue][:number]}: #{d[:issue][:title]}#{fmt_url shorten d[:issue][:html_url]}"
 end
 
 def receive_issue_comment(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:issue][:user][:login]} commented on issue ##{d[:issue][:number]}: #{d[:issue][:title]}#{fmt_url shorten d[:comment][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} commented on issue ##{d[:issue][:number]}: #{d[:issue][:title]}#{fmt_url shorten d[:comment][:html_url]}"
 end
 
 def receive_member(_d)
@@ -154,11 +154,11 @@ def receive_pull_request(d)
     else
       d[:action]
     end
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:pull_request][:user][:login]} #{action} pull request ##{d[:pull_request][:number]}: #{d[:pull_request][:title]} (#{fmt_branch d[:pull_request][:head][:ref]} → #{fmt_branch d[:pull_request][:base][:ref]})#{fmt_url shorten d[:pull_request][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} #{action} pull request ##{d[:pull_request][:number]}: #{d[:pull_request][:title]} (#{fmt_branch d[:pull_request][:head][:ref]} → #{fmt_branch d[:pull_request][:base][:ref]})#{fmt_url shorten d[:pull_request][:html_url]}"
 end
 
 def receive_pull_request_review_comment(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:comment][:user][:login]} commented on pull request ##{d[:pull_request][:number]}: #{d[:pull_request][:title]}#{fmt_url shorten d[:comment][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} commented on pull request ##{d[:pull_request][:number]}: #{d[:pull_request][:title]}#{fmt_url shorten d[:comment][:html_url]}"
 end
 
 def receive_push(d)
