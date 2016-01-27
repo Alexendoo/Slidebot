@@ -66,7 +66,7 @@ def receive_ping(_d)
 end
 
 def receive_commit_comment(d)
-  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} commented on commit #{fmt_hash d[:comment][:commit_id]}:#{shorten fmt_url d[:comment][:html_url]}"
+  say "[#{fmt_repo d[:repository][:name]}] #{fmt_name d[:sender][:login]} commented on commit #{fmt_hash d[:comment][:commit_id]}:#{fmt_url shorten d[:comment][:html_url]}"
 end
 
 def receive_create(d)
