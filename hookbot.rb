@@ -175,7 +175,7 @@ def receive_push(d)
   distinct.first(3).each do |commit|
     message =
       if commit[:message].include? "\n"
-        commit[:message].split("\n").first + '...'
+        commit[:message].split("\n").first + fmt_hash('...')
       else
         commit[:message]
       end
