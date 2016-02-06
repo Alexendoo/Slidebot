@@ -25,7 +25,7 @@ $bot = Cinch::Bot.new do
   end
 end
 
-$bot.loggers.level = :info
+$bot.loggers.level = :warn
 
 Thread.new do
   $bot.start
@@ -175,7 +175,7 @@ def receive_push(d)
   distinct.first(3).each do |commit|
     message =
       if commit[:message].include? "\n"
-        commit[:message].split("\n").first + fmt_hash('...')
+        commit[:message].split("\n").first + fmt_repo('...')
       else
         commit[:message]
       end
