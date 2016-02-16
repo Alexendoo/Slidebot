@@ -199,8 +199,12 @@ def receive_team_add(_d)
   halt 501
 end
 
-def receive_watch(_d)
-  halt 501
+def receive_watch(d)
+  # Stars are named 'watchers' within the API
+  stars = d[:repository][:watchers]
+  if watchers % 50 == 0
+    say "[#{fmt_repo d[:repository][:name]}] has reached #{fmt_num stars} stars"
+  end
 end
 
 def shorten(url)
