@@ -206,7 +206,7 @@ end
 def receive_watch(d)
   # Stars are named 'watchers' within the API
   stars = d[:repository][:watchers]
-  if watchers % 50 == 0
+  if stars % 10 == 0
     say "[#{fmt_repo d[:repository][:name]}] has reached #{fmt_num stars} stars"
   end
 end
