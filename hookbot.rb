@@ -15,16 +15,12 @@ $bot = Cinch::Bot.new do
   end
 
   on :message, /\B#\d{2,}\b/ do |m|
-    return if m.user.nick == CONFIG[:irc][:nick]
+    return if m.user.host.include? '/bot/'
     m.message.scan(/\B#\K\d{2,}\b/).first(3).each do |issue|
       data = JSON.parse(RestClient.get("https://api.github.com/repos/#{CONFIG[:github][:repo]}/issues/#{issue}",
                                        params: { access_token: CONFIG[:github][:token] }),
                         symbolize_names: true)
-      if issue == '1010'
-        m.reply "[#{fmt_bad('annoying')}] Issue #1010: Nobody cares"
-      else
-        m.reply "[#{data[:state] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?(:pull_request) ? 'Pull request' : 'Issue'} ##{data[:number]}: #{data[:title]}#{fmt_url shorten data[:html_url]}"
-      end
+      m.reply "[#{data[:state] == 'open' ? fmt_good('open') : fmt_bad('closed')}] #{data.key?(:pull_request) ? 'Pull request' : 'Issue'} ##{data[:number]}: #{data[:title]}#{fmt_url shorten data[:html_url]}"
     end
   end
 end
