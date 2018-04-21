@@ -1,2 +1,4 @@
-config.json
-*.py
+tokens.json
+/slidebot*
+*.db
+*.db.lock
