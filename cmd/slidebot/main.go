@@ -49,7 +49,7 @@ func main() {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	fmt.Printf("%s: %s\n", m.Author.Username, m.Content)
+	fmt.Printf("%s (%s): %s\n", m.Author.Username, m.Author.ID, m.Content)
 
 	if m.Author.ID == s.State.User.ID {
 		return

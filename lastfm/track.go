@@ -44,8 +44,12 @@ type trackResponse struct {
 }
 
 func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
+	fmt.Println(args)
+
 	username := getUsername(args, m)
 	target := api("user.getrecenttracks", username)
+
+	fmt.Println(target)
 
 	resp, err := http.Get(target)
 	if err != nil {
@@ -59,10 +63,15 @@ func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
 	}
 
 	var trackJSON trackResponse
-	json.Unmarshal(body, &trackJSON)
+	err = json.Unmarshal(body, &trackJSON)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	embed := buildEmbed(&trackJSON)
 	if embed == nil {
+		fmt.Println("nil embed")
 		return
 	}
 
@@ -73,7 +82,7 @@ func getUsername(args []string, m *discordgo.Message) string {
 	if len(args) > 0 {
 		username := args[0]
 
-		err := store.Set(store.BucketLastFM, (m.Author.ID), (username))
+		err := store.Set(store.BucketLastFM, m.Author.ID, username)
 		if err != nil {
 			fmt.Println(err)
 		}

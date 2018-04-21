@@ -33,7 +33,9 @@ func Get(bucket []byte, key string) (string, error) {
 		return "", err
 	}
 
-	return string(tx.Bucket(bucket).Get([]byte(key))), nil
+	value := tx.Bucket(bucket).Get([]byte(key))
+
+	return string(value), tx.Rollback()
 }
 
 func Set(bucket []byte, key, value string) error {
