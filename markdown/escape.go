@@ -16,8 +16,8 @@ func newEscaper(chars ...string) *strings.Replacer {
 
 var escaper = newEscaper(
 	"*", "_", "~", // basic formatting
-	"`",      // code blocks
-	"@", "#", // Discord mentions
+	"`",                // code blocks
+	"<", ">", "@", "#", // Discord mentions
 	":", // Emoji
 )
 

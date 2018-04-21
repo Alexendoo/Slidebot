@@ -44,9 +44,11 @@ type trackResponse struct {
 }
 
 func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
-	fmt.Println(args)
-
 	username := getUsername(args, m)
+	if username == "" {
+		s.ChannelMessageSend(m.ChannelID, "Set a username first with `.l username`")
+		return
+	}
 	target := api("user.getrecenttracks", username)
 
 	fmt.Println(target)
@@ -63,15 +65,11 @@ func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
 	}
 
 	var trackJSON trackResponse
-	err = json.Unmarshal(body, &trackJSON)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	json.Unmarshal(body, &trackJSON)
 
 	embed := buildEmbed(&trackJSON)
 	if embed == nil {
-		fmt.Println("nil embed")
+		printError(body, s, m)
 		return
 	}
 
@@ -94,8 +92,6 @@ func getUsername(args []string, m *discordgo.Message) string {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	// TODO: if username == ""
 
 	return username
 }
@@ -129,16 +125,18 @@ func buildEmbed(trackJSON *trackResponse) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: markdown.Escape(track.Name),
+			Name: track.Name,
 			URL:  track.URL,
 		},
 
 		Title: fmt.Sprintf("By **%s**", markdown.Escape(track.Artist.Name)),
 		URL:   track.Artist.URL,
 
-		Description: fmt.Sprintf("On the album **%s**", markdown.Escape(track.Album.Name)),
-
 		Color: 0xd50000,
+	}
+
+	if track.Album.Name != "" {
+		embed.Description = fmt.Sprintf("On the album **%s**", markdown.Escape(track.Album.Name))
 	}
 
 	if len(track.Images) > 0 {
@@ -148,4 +146,26 @@ func buildEmbed(trackJSON *trackResponse) *discordgo.MessageEmbed {
 	}
 
 	return embed
+}
+
+type errResponse struct {
+	Code    int    `json:"error"`
+	Message string `json:"message"`
+}
+
+func printError(body []byte, s *discordgo.Session, m *discordgo.Message) {
+	var resp errResponse
+	json.Unmarshal(body, &resp)
+
+	if resp.Message == "" {
+		resp.Message = fmt.Sprintf("Unknown (%d)", resp.Code)
+	}
+
+	msg := fmt.Sprintf(
+		"<@%s> API error: %s",
+		m.Author.ID,
+		markdown.Escape(resp.Message),
+	)
+
+	s.ChannelMessageSend(m.ChannelID, msg)
 }
