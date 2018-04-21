@@ -56,12 +56,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	words := strings.Fields(m.Content)
-	if len(words) == 0 {
+	if len(words) == 0 || words[0][0] != '.' {
 		return
 	}
 
 	switch words[0][1:] {
-	case "l":
+	case "help":
+		s.ChannelMessageSend(m.ChannelID, "https://git.io/Slidebot")
+	case "lastfm", "last.fm", "last", "l":
 		lastfm.RecentTrack(words[1:], s, m.Message)
 	case "echo":
 		s.ChannelMessageSend(m.ChannelID, m.Content)
