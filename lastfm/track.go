@@ -8,6 +8,8 @@ import (
 	"net/url"
 
 	"github.com/Alexendoo/Slidebot/config"
+	"github.com/Alexendoo/Slidebot/markdown"
+	"github.com/Alexendoo/Slidebot/store"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -41,28 +43,9 @@ type trackResponse struct {
 	} `json:"recenttracks"`
 }
 
-func api(method, username string) string {
-	target := &url.URL{
-		Scheme: "https",
-		Host:   "ws.audioscrobbler.com",
-		Path:   "/2.0/",
-	}
-
-	v := url.Values{}
-	v.Set("method", method)
-	v.Set("user", username)
-	v.Set("api_key", config.Tokens.LastFM)
-	v.Set("format", "json")
-	v.Set("limit", "1")
-	v.Set("extended", "1")
-
-	target.RawQuery = v.Encode()
-
-	return target.String()
-}
-
 func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
-	target := api("user.getrecenttracks", args[0])
+	username := getUsername(args, m)
+	target := api("user.getrecenttracks", username)
 
 	resp, err := http.Get(target)
 	if err != nil {
@@ -86,6 +69,48 @@ func RecentTrack(args []string, s *discordgo.Session, m *discordgo.Message) {
 	s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
 
+func getUsername(args []string, m *discordgo.Message) string {
+	if len(args) > 0 {
+		username := args[0]
+
+		err := store.Set(store.BucketLastFM, (m.Author.ID), (username))
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		return username
+	}
+
+	username, err := store.Get(store.BucketLastFM, m.Author.ID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// TODO: if username == ""
+
+	return username
+}
+
+func api(method, username string) string {
+	target := &url.URL{
+		Scheme: "https",
+		Host:   "ws.audioscrobbler.com",
+		Path:   "/2.0/",
+	}
+
+	v := url.Values{}
+	v.Set("method", method)
+	v.Set("user", username)
+	v.Set("api_key", config.Tokens.LastFM)
+	v.Set("format", "json")
+	v.Set("limit", "1")
+	v.Set("extended", "1")
+
+	target.RawQuery = v.Encode()
+
+	return target.String()
+}
+
 func buildEmbed(trackJSON *trackResponse) *discordgo.MessageEmbed {
 	if len(trackJSON.RecentTracks.Track) == 0 {
 		return nil
@@ -93,12 +118,17 @@ func buildEmbed(trackJSON *trackResponse) *discordgo.MessageEmbed {
 	track := trackJSON.RecentTracks.Track[0]
 
 	embed := &discordgo.MessageEmbed{
-		URL:   track.URL,
-		Title: track.Name,
+
 		Author: &discordgo.MessageEmbedAuthor{
-			Name: track.Artist.Name,
-			URL:  track.Artist.URL,
+			Name: markdown.Escape(track.Name),
+			URL:  track.URL,
 		},
+
+		Title: fmt.Sprintf("By **%s**", markdown.Escape(track.Artist.Name)),
+		URL:   track.Artist.URL,
+
+		Description: fmt.Sprintf("On the album **%s**", markdown.Escape(track.Album.Name)),
+
 		Color: 0xd50000,
 	}
 
@@ -106,10 +136,6 @@ func buildEmbed(trackJSON *trackResponse) *discordgo.MessageEmbed {
 		embed.Thumbnail = &discordgo.MessageEmbedThumbnail{
 			URL: track.Images[len(track.Images)-1].URL,
 		}
-	}
-
-	if len(track.Artist.Images) > 0 {
-		embed.Author.IconURL = track.Artist.Images[len(track.Artist.Images)-1].URL
 	}
 
 	return embed

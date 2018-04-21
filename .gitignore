@@ -1,2 +1,4 @@
 tokens.json
 /slidebot*
+*.db
+*.db.lock

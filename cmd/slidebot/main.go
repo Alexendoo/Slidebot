@@ -9,11 +9,18 @@ import (
 
 	"github.com/Alexendoo/Slidebot/config"
 	"github.com/Alexendoo/Slidebot/lastfm"
+	"github.com/Alexendoo/Slidebot/store"
 	"github.com/bwmarrin/discordgo"
 )
 
 func main() {
-	err := config.Load()
+	err := config.Open()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = store.Open("bolt.db")
 	if err != nil {
 		fmt.Println(err)
 		return

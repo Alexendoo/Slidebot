@@ -12,7 +12,7 @@ type APITokens struct {
 
 var Tokens APITokens
 
-func Load() error {
+func Open() error {
 	body, err := ioutil.ReadFile("tokens.json")
 
 	if err != nil {
