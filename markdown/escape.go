@@ -1,6 +1,8 @@
 package markdown
 
-import "strings"
+import (
+	"strings"
+)
 
 func newEscaper(chars ...string) *strings.Replacer {
 	replacements := []string{}

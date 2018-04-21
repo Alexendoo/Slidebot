@@ -8,9 +8,7 @@ import (
 	"syscall"
 
 	"github.com/Alexendoo/Slidebot/config"
-
 	"github.com/Alexendoo/Slidebot/lastfm"
-
 	"github.com/bwmarrin/discordgo"
 )
 

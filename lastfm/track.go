@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"github.com/Alexendoo/Slidebot/config"
-
 	"github.com/bwmarrin/discordgo"
 )
 
