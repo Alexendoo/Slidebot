@@ -7,6 +7,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Alexendoo/Slidebot/android"
 	"github.com/Alexendoo/Slidebot/config"
 	"github.com/Alexendoo/Slidebot/lastfm"
 	"github.com/Alexendoo/Slidebot/store"
@@ -65,6 +66,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "https://git.io/Slidebot")
 	case "lastfm", "last.fm", "last", "l":
 		lastfm.RecentTrack(words[1:], s, m.Message)
+	case "api", "android", "sdk":
+		android.APILevel(words[1:], s, m.Message)
 	case "echo":
 		s.ChannelMessageSend(m.ChannelID, m.Content)
 	}
