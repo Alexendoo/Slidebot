@@ -34,7 +34,7 @@ var levels = map[int]string{
 	25: "Android 7.1 Nougat: https://developer.android.com/about/versions/nougat/android-7.1.html",
 	26: "Android 8.0 Oreo: https://developer.android.com/about/versions/oreo/android-8.0.html",
 	27: "Android 8.1 Oreo: https://developer.android.com/about/versions/oreo/android-8.1.html",
-	28: "Android P: https://developer.android.com/preview/features.html",
+	28: "Android 9.0 Pie: https://developer.android.com/about/versions/pie/android-9.0",
 }
 
 func APILevel(args []string, s *discordgo.Session, m *discordgo.Message) {
