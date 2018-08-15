@@ -16,9 +16,13 @@ type Handler struct {
 }
 
 type GenericEvent interface {
-	GetAction() string
 	GetRepo() *github.Repository
 	GetSender() *github.User
+}
+
+type ActionEvent interface {
+	GetAction() string
+	GenericEvent
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,23 +40,26 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch event := event.(type) {
+	case ActionEvent:
+		log.Println("Action Event", webhookType, event.GetAction())
+		h.handleGeneric(event, webhookType+"_"+event.GetAction())
 	case GenericEvent:
+		log.Println("Generic Event", webhookType)
 		h.handleGeneric(event, webhookType)
 	default:
 		log.Printf("unhandled event: %#+v\n", event)
 	}
 }
 
-func (h *Handler) handleGeneric(event GenericEvent, name string) {
+func (h *Handler) handleGeneric(event GenericEvent, tag string) {
 	fullname := *event.GetRepo().FullName
 	target, ok := config.Repos[fullname]
 	if !ok {
-		log.Printf("unhandled repo: %s\n", fullname)
+		log.Printf("Unhandled repo: %s\n", fullname)
 		return
 	}
 
 	sender := event.GetSender()
-	action := event.GetAction()
 
 	embed := &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
@@ -61,12 +68,12 @@ func (h *Handler) handleGeneric(event GenericEvent, name string) {
 			IconURL: *sender.AvatarURL,
 		},
 
-		Title:       templates.Exec(event, name, action, "title"),
-		URL:         templates.Exec(event, name, action, "URL"),
-		Description: templates.Exec(event, name, action, "description"),
+		Title:       templates.Exec(event, tag, "title"),
+		URL:         templates.Exec(event, tag, "URL"),
+		Description: templates.Exec(event, tag, "description"),
 	}
 
-	if footer := templates.Exec(event, name, action, "footer"); footer != "" {
+	if footer := templates.Exec(event, tag, "footer"); footer != "" {
 		embed.Footer = &discordgo.MessageEmbedFooter{
 			Text: footer,
 		}
