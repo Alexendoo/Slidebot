@@ -61,8 +61,15 @@ func (h *Handler) handleGeneric(event GenericEvent, name string) {
 			IconURL: *sender.AvatarURL,
 		},
 
-		Title: templates.Exec(event, name, action, "title"),
-		URL:   templates.Exec(event, name, action, "URL"),
+		Title:       templates.Exec(event, name, action, "title"),
+		URL:         templates.Exec(event, name, action, "URL"),
+		Description: templates.Exec(event, name, action, "description"),
+	}
+
+	if footer := templates.Exec(event, name, action, "footer"); footer != "" {
+		embed.Footer = &discordgo.MessageEmbedFooter{
+			Text: footer,
+		}
 	}
 
 	log.Printf("embed.Title: %#+v\n", embed.Title)

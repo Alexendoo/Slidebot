@@ -5,43 +5,49 @@ import (
 	"log"
 	"strings"
 	"text/template"
+
+	"github.com/Alexendoo/Slidebot/markdown"
 )
 
 type eventTemplate struct {
-	name string
+	tag string
 
 	title       string
-	description string
 	URL         string
+	description string
+	footer      string
 }
 
-func (e *eventTemplate) field(name string) string {
-	return e.name + "_" + name
-}
+var tpl = template.Must(template.New("_base").Parse(""))
 
-var tpl = template.Must(template.New("__base").Parse(""))
-
-func parseIf(name, value string) {
+func parseIf(tag, value string) {
 	if value != "" {
-		template.Must(tpl.New(name).Parse(value))
+		template.Must(tpl.New(tag).Parse(value))
 	}
 }
 
 func init() {
 	eventTemplates := []*eventTemplate{
 		&eventTemplate{
-			name: "issues_opened",
+			tag: "issues_opened",
 
-			title: "Opened issue {{.Issue.Title}}",
-			URL:   "{{.Issue.HTMLURL}}",
+			title:       "Opened issue **{{escape .Issue.Title}}**",
+			URL:         "{{.Issue.HTMLURL}}",
+			description: "{{.Issue.Body}}",
+			footer:      "{{.Repo.FullName}}#{{.Issue.Number}}",
 		},
 		&eventTemplate{
-			name: "issues_closed",
+			tag: "issues_closed",
 
-			title: "Closed issue {{.Issue.Title}}",
-			URL:   "{{.Issue.HTMLURL}}",
+			title:  "Closed issue **{{escape .Issue.Title}}**",
+			URL:    "{{.Issue.HTMLURL}}",
+			footer: "{{.Repo.FullName}}#{{.Issue.Number}}",
 		},
 	}
+
+	tpl.Funcs(template.FuncMap{
+		"escape": markdown.Escape,
+	})
 
 	for _, t := range eventTemplates {
 		var parse = func(field, templateStr string) {
@@ -49,14 +55,15 @@ func init() {
 				return
 			}
 
-			name := t.name + "_" + field
+			name := t.tag + "_" + field
 
 			template.Must(tpl.New(name).Parse(templateStr))
 		}
 
 		parse("title", t.title)
-		parse("description", t.description)
 		parse("URL", t.URL)
+		parse("description", t.description)
+		parse("footer", t.footer)
 	}
 }
 
