@@ -35,6 +35,12 @@ func init() {
 			title: "Opened issue {{.Issue.Title}}",
 			URL:   "{{.Issue.HTMLURL}}",
 		},
+		&eventTemplate{
+			name: "issues_closed",
+
+			title: "Closed issue {{.Issue.Title}}",
+			URL:   "{{.Issue.HTMLURL}}",
+		},
 	}
 
 	for _, t := range eventTemplates {

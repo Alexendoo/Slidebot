@@ -51,15 +51,18 @@ func (h *Handler) handleGeneric(event GenericEvent, name string) {
 		return
 	}
 
+	sender := event.GetSender()
+	action := event.GetAction()
+
 	embed := &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    *event.GetSender().Login,
-			URL:     *event.GetSender().HTMLURL,
-			IconURL: *event.GetSender().AvatarURL,
+			Name:    *sender.Login,
+			URL:     *sender.HTMLURL,
+			IconURL: *sender.AvatarURL,
 		},
 
-		Title: templates.Exec(event, name, event.GetAction(), "title"),
-		URL:   templates.Exec(event, name, event.GetAction(), "URL"),
+		Title: templates.Exec(event, name, action, "title"),
+		URL:   templates.Exec(event, name, action, "URL"),
 	}
 
 	log.Printf("embed.Title: %#+v\n", embed.Title)
@@ -68,6 +71,6 @@ func (h *Handler) handleGeneric(event GenericEvent, name string) {
 	_, err := h.Discord.ChannelMessageSendEmbed(target, embed)
 
 	if err != nil {
-		log.Printf("err: %s\n", err.Error())
+		log.Printf("Error sending generic message event: %s\n", err.Error())
 	}
 }
