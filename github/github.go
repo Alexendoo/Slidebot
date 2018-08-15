@@ -40,6 +40,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch event := event.(type) {
+	// TODO: add PushEvent and alter behaviour based on tag/commits/etc
 	case ActionEvent:
 		log.Println("Action Event", webhookType, event.GetAction())
 		h.handleGeneric(event, webhookType+"_"+event.GetAction())
@@ -47,7 +48,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Println("Generic Event", webhookType)
 		h.handleGeneric(event, webhookType)
 	default:
-		log.Printf("unhandled event: %#+v\n", event)
+		log.Println("Unhandled Event", webhookType)
 	}
 }
 
@@ -78,9 +79,6 @@ func (h *Handler) handleGeneric(event GenericEvent, tag string) {
 			Text: footer,
 		}
 	}
-
-	log.Printf("embed.Title: %#+v\n", embed.Title)
-	log.Printf("embed.URL: %#+v\n", embed.URL)
 
 	_, err := h.Discord.ChannelMessageSendEmbed(target, embed)
 

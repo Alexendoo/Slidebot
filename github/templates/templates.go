@@ -28,6 +28,7 @@ func parseIf(tag, value string) {
 
 func init() {
 	eventTemplates := []*eventTemplate{
+		// https://developer.github.com/v3/activity/events/types/#issuesevent
 		&eventTemplate{
 			tag: "issues_opened",
 
@@ -42,6 +43,16 @@ func init() {
 			title:  "Closed issue **{{escape .Issue.Title}}**",
 			URL:    "{{.Issue.HTMLURL}}",
 			footer: "{{.Repo.FullName}}#{{.Issue.Number}}",
+		},
+
+		// https://developer.github.com/v3/activity/events/types/#pushevent
+		&eventTemplate{
+			tag: "push",
+
+			title:       "Pushed {{.Size}} commits to {{.Ref}}",
+			URL:         "{{.Compare}}",
+			description: "{{range .Commits}}{{.SHA}} {{.Message}}{{end}}",
+			footer:      "{{.Repo.FullName}}",
 		},
 	}
 
