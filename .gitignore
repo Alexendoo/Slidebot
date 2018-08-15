@@ -1,4 +1,4 @@
-tokens.json
+config.json
 /slidebot*
 *.db
 *.db.lock

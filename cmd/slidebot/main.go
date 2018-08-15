@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	err := config.Open()
+	err := config.Load()
 	if err != nil {
 		fmt.Println(err)
 		return
