@@ -1,1 +1,0 @@
-Opened issue {{.Issue.Title}}

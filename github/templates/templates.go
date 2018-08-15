@@ -2,25 +2,55 @@ package templates
 
 import (
 	"bytes"
-	"go/build"
 	"log"
-	"path/filepath"
 	"strings"
 	"text/template"
 )
 
-var tpl *template.Template
+type eventTemplate struct {
+	name string
+
+	title       string
+	description string
+	URL         string
+}
+
+func (e *eventTemplate) field(name string) string {
+	return e.name + "_" + name
+}
+
+var tpl = template.Must(template.New("__base").Parse(""))
+
+func parseIf(name, value string) {
+	if value != "" {
+		template.Must(tpl.New(name).Parse(value))
+	}
+}
 
 func init() {
-	glob := filepath.Join(
-		build.Default.GOPATH,
-		"src/github.com/Alexendoo/Slidebot/github/templates/*.tpl",
-	)
+	eventTemplates := []*eventTemplate{
+		&eventTemplate{
+			name: "issues_opened",
 
-	var err error
-	tpl, err = template.ParseGlob(glob)
-	if err != nil {
-		panic(err)
+			title: "Opened issue {{.Issue.Title}}",
+			URL:   "{{.Issue.HTMLURL}}",
+		},
+	}
+
+	for _, t := range eventTemplates {
+		var parse = func(field, templateStr string) {
+			if templateStr == "" {
+				return
+			}
+
+			name := t.name + "_" + field
+
+			template.Must(tpl.New(name).Parse(templateStr))
+		}
+
+		parse("title", t.title)
+		parse("description", t.description)
+		parse("URL", t.URL)
 	}
 }
 
