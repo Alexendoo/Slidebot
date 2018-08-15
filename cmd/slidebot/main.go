@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Alexendoo/Slidebot/android"
 	"github.com/Alexendoo/Slidebot/config"
+	"github.com/Alexendoo/Slidebot/github"
 	"github.com/Alexendoo/Slidebot/lastfm"
 	"github.com/Alexendoo/Slidebot/store"
 	"github.com/bwmarrin/discordgo"
@@ -41,6 +43,20 @@ func main() {
 		return
 	}
 	defer dg.Close()
+
+	gh := &github.Handler{
+		Discord: dg,
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/hook/github", gh)
+
+	srv := http.Server{
+		Addr:    ":9000",
+		Handler: mux,
+	}
+	go srv.ListenAndServe()
+	defer srv.Close()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
