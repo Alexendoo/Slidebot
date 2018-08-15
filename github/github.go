@@ -1,20 +1,24 @@
 package github
 
 import (
-	"bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"text/template"
 
 	"github.com/Alexendoo/Slidebot/config"
-
+	"github.com/Alexendoo/Slidebot/github/templates"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 )
 
 type Handler struct {
 	Discord *discordgo.Session
+}
+
+type GenericEvent interface {
+	GetAction() string
+	GetRepo() *github.Repository
+	GetSender() *github.User
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +28,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := github.ParseWebHook(github.WebHookType(r), payload)
+	webhookType := github.WebHookType(r)
+	event, err := github.ParseWebHook(webhookType, payload)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -33,6 +38,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch event := event.(type) {
 	case *github.PushEvent:
 		h.handlePushEvent(event)
+	case GenericEvent:
+		log.Printf("GenericEvent: %#+v\n", event)
 	case *github.IssuesEvent:
 		h.handleIssuesEvent(event, w)
 	default:
@@ -44,20 +51,25 @@ func (h *Handler) handlePushEvent(event *github.PushEvent) {
 	log.Printf("event: %#+v\n", event)
 }
 
-func createTemplate(name, text string) *template.Template {
-	return template.Must(template.New(name).Parse(text))
-}
-func executeTemplate(tpl *template.Template, data interface{}) string {
-	var buf bytes.Buffer
-	err := tpl.Execute(&buf, data)
-	if err != nil {
-		panic(err)
-	}
+// func (h *Handler) handleGeneric(event GenericEvent, name string) {
+// 	fullname := *event.GetRepo().FullName
+// 	target, ok := config.Repos[fullname]
+// 	if !ok {
+// 		log.Printf("unhandled repo: %s\n", fullname)
+// 		return
+// 	}
 
-	return buf.String()
-}
+// 	embed := &discordgo.MessageEmbed{
+// 		Author: &discordgo.MessageEmbedAuthor{
+// 			Name:    *event.GetSender().Login,
+// 			URL:     *event.GetSender().HTMLURL,
+// 			IconURL: *event.GetSender().AvatarURL,
+// 		},
 
-var issueOpen = createTemplate("issueOpen", "{{.Sender.Login}} opened issue {{.Issue.Title}}")
+// 		Title: templates.Exec(event, name, event.GetAction()),
+// 		// URL:   *event.Issue.HTMLURL,
+// 	}
+// }
 
 func (h *Handler) handleIssuesEvent(event *github.IssuesEvent, w http.ResponseWriter) {
 	target, ok := config.Repos[*event.Repo.FullName]
@@ -66,15 +78,18 @@ func (h *Handler) handleIssuesEvent(event *github.IssuesEvent, w http.ResponseWr
 		return
 	}
 
-	var tpl *template.Template
-	switch *event.Action {
-	case "opened":
-		tpl = issueOpen
+	embed := &discordgo.MessageEmbed{
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    *event.Sender.Login,
+			URL:     *event.Sender.HTMLURL,
+			IconURL: *event.Sender.AvatarURL,
+		},
+
+		Title: templates.Exec(event, "issue", *event.Action),
+		URL:   *event.Issue.HTMLURL,
 	}
 
-	message := executeTemplate(tpl, event)
-
-	_, err := h.Discord.ChannelMessageSend(target, message)
+	_, err := h.Discord.ChannelMessageSendEmbed(target, embed)
 
 	if err != nil {
 		log.Printf("err: %#+v\n", err)
