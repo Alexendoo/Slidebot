@@ -44,6 +44,13 @@ func init() {
 			URL:    "{{.Issue.HTMLURL}}",
 			footer: "{{.Repo.FullName}}#{{.Issue.Number}}",
 		},
+		&eventTemplate{
+			tag: "issues_reopened",
+
+			title:  "Reopened issue **{{escape .Issue.Title}}**",
+			URL:    "{{.Issue.HTMLURL}}",
+			footer: "{{.Repo.FullName}}#{{.Issue.Number}}",
+		},
 
 		// https://developer.github.com/v3/activity/events/types/#pushevent
 		&eventTemplate{
