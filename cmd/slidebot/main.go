@@ -52,7 +52,7 @@ func main() {
 	mux.Handle("/hook/github", gh)
 
 	srv := http.Server{
-		Addr:    ":9000",
+		Addr:    "localhost:9000",
 		Handler: mux,
 	}
 	go srv.ListenAndServe()
